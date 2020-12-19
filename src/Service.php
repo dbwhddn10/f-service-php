@@ -221,40 +221,61 @@ class Service {
 
     protected function getAvailableDataWith($key)
     {
-        $key  = explode('.', $key)[0];
-        $data = $this->data();
+        $key    = explode('.', $key)[0];
+        $data   = $this->data();
+        $loader = $this->getAllLoaders()->get($key);
+
+        if ( $data->has($key) )
+        {
+            return $data;
+        }
 
         if ( $this->inputs()->has($key) )
         {
-            $value = $this->inputs()->get($key);
+            $loader = function () use ($value) {
 
-            $data->put($key, $value);
+                return $value;
+            };
         }
-        else if ( ! $this->data()->has($key) && $this->getAllLoaders()->has($key) )
+
+        if ( empty($loader) )
         {
-            $loader = $this->getAllLoaders()->get($key);
-            $value  = $this->resolve($loader);
+            return $data;
+        }
 
-            if ( static::isInitable($value) )
+        $value     = $this->resolve($loader);
+        $isArray   = is_array($value);
+        $arrValue  = $isArray ? $value : [$value];
+        $isService = static::isInitable($arrValue[0]);
+
+        foreach ( $arrValue as $i => $value )
+        {
+            if ( !$isService )
             {
-                isset($value[2])? : $value[2] = [];
-
-                foreach ( $value[2] as $k => $name )
-                {
-                    $value[2][$k] = $this->resolveBindName($name);
-                }
-
-                $service = static::initService($value);
-                $value   = $service->run();
-
-                $this->childs->put($key, $service);
+                break;
             }
+
+            isset($value[2])? : $value[2] = [];
+
+            foreach ( $value[2] as $k => $name )
+            {
+                $value[2][$k] = $this->resolveBindName($name);
+            }
+
+            $service = static::initService($value);
+            $value   = $service->run();
+
+            $this->childs->put($isArray ? $key : $key.'.'.$i, $service);
+
+            $arrValue[$i] = $value;
 
             if ( ! $this->isResolveError($value) )
             {
-                $data->put($key, $value);
+                unset($arrValue[$i]);
             }
         }
+
+        $data->put($key, $isArray ? $arrValue : $arrValue[0]);
 
         return $data;
     }
