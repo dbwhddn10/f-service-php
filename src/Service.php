@@ -247,6 +247,7 @@ class Service {
         $isArray   = is_array($value);
         $arrValue  = $isArray ? $value : [$value];
         $isService = static::isInitable($arrValue[0]);
+        $hasError  = false;
 
         foreach ( $arrValue as $i => $value )
         {
@@ -272,10 +273,14 @@ class Service {
             if ( ! $this->isResolveError($value) )
             {
                 unset($arrValue[$i]);
+                $hasError = true;
             }
         }
 
-        $data->put($key, $isArray ? $arrValue : $arrValue[0]);
+        if ( !$hasError )
+        {
+            $data->put($key, $isArray ? $arrValue : $arrValue[0]);
+        }
 
         return $data;
     }
