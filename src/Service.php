@@ -232,6 +232,7 @@ class Service {
 
         if ( $this->inputs()->has($key) )
         {
+            $value  = $this->inputs()->get($key);
             $loader = function () use ($value) {
 
                 return $value;
