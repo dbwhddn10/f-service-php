@@ -3,15 +3,17 @@
 namespace Dbwhddn10\FService;
 
 use Closure;
-use Illuminate\Support\Arr;
+use Dbwhddn10\FService\Validation\MessageLoader;
+use Dbwhddn10\FService\Validation\Validator;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
+use Illuminate\Translation\Translator;
+use Illuminate\Validation\Factory as ValidationFactory;
 
 class Service {
 
     const BIND_NAME_EXP = '/\{\{([a-z0-9\_\.\*]+)\}\}/';
 
-    protected static $resolverForNewCollection;
-    protected static $resolverForGetValidationErrors;
     protected $childs;
     protected $data;
     protected $errors;
@@ -22,12 +24,12 @@ class Service {
 
     public function __construct(array $inputs = [], array $names = [], $validated = [])
     {
-        $this->childs    = static::newCollection();
-        $this->data      = static::newCollection();
-        $this->errors    = static::newCollection();
-        $this->inputs    = static::newCollection($inputs);
-        $this->names     = static::newCollection($names);
-        $this->validated = static::newCollection(array_fill_keys($validated, true));
+        $this->childs    = new Collection();
+        $this->data      = new Collection();
+        $this->errors    = new Collection();
+        $this->inputs    = new Collection($inputs);
+        $this->names     = new Collection($names);
+        $this->validated = new Collection(array_fill_keys($validated, true));
         $this->processed = false;
 
         foreach ( $validated as $value )
@@ -52,7 +54,7 @@ class Service {
 
         ksort($data);
 
-        return static::newCollection($data);
+        return new Collection($data);
     }
 
     public function errors()
@@ -71,7 +73,7 @@ class Service {
 
         $arr = array_merge($arr, static::getArrBindNames());
 
-        return static::newCollection($arr);
+        return new Collection($arr);
     }
 
     public static function getAllCallbackLists()
@@ -85,7 +87,7 @@ class Service {
 
         $arr = array_merge($arr, static::getArrCallbackLists());
 
-        return static::newCollection($arr);
+        return new Collection($arr);
     }
 
     public static function getAllLoaders()
@@ -99,7 +101,7 @@ class Service {
 
         $arr = array_merge($arr, static::getArrLoaders());
 
-        return static::newCollection($arr);
+        return new Collection($arr);
     }
 
     public static function getAllPromiseLists()
@@ -113,7 +115,7 @@ class Service {
 
         $arr = array_merge_recursive($arr, static::getArrPromiseLists());
 
-        return static::newCollection($arr);
+        return new Collection($arr);
     }
 
     public static function getAllRuleLists()
@@ -127,7 +129,7 @@ class Service {
 
         $arr = array_merge_recursive($arr, static::getArrRuleLists());
 
-        return static::newCollection($arr);
+        return new Collection($arr);
     }
 
     public static function getAllTraits()
@@ -142,7 +144,7 @@ class Service {
         $arr = array_merge($arr, static::getArrTraits());
         $arr = array_unique($arr);
 
-        return static::newCollection($arr);
+        return new Collection($arr);
     }
 
     public static function getArrBindNames()
@@ -204,7 +206,7 @@ class Service {
 
     public static function isInitable($value)
     {
-        return is_array($value) && array_key_exists(0, $value) && is_string($value[0]) && preg_match('/Service$/', $value[0]);
+        return is_array($value) && array_key_exists(0, $value) && is_string($value[0]) && is_a($value[0], Service::class, true);
     }
 
     protected function isRequiredRule($rule)
@@ -396,14 +398,23 @@ class Service {
         return array_keys($rtn);
     }
 
-    public static function getValidationErrors($data, $ruleLists, $names)
+    public function getValidationErrors($data, $ruleLists, $names)
     {
-        return call_user_func_array(static::$resolverForGetValidationErrors, [$data, $ruleLists, $names]);
-    }
+        isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])? : $_SERVER['HTTP_ACCEPT_LANGUAGE'] = 'en';
 
-    public static function newCollection($items=[])
-    {
-        return call_user_func_array(static::$resolverForNewCollection, [$items]);
+        $loader  = new MessageLoader(new Filesystem, __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'Validation'.DIRECTORY_SEPARATOR.'lang');
+        $trans   = new Translator($loader, $_SERVER['HTTP_ACCEPT_LANGUAGE']);
+        $factory = new ValidationFactory($trans);
+
+        $factory->resolver(function ($tr, array $data, array $rules, array $messages, array $names)
+        {
+            return new Validator($tr, $data, $rules, $messages, $names);
+        });
+
+        $validator = $factory->make($data, $ruleLists, $messages=[], $names);
+        $validator->passes();
+
+        return $validator->errors()->all();
     }
 
     protected function resolve($func)
@@ -511,16 +522,6 @@ class Service {
         }
     }
 
-    public static function setResolverForNewCollection(Closure $resolver)
-    {
-        static::$resolverForNewCollection = $resolver;
-    }
-
-    public static function setResolverForGetValidationErrors(Closure $resolver)
-    {
-        static::$resolverForGetValidationErrors = $resolver;
-    }
-
     public function totalErrors()
     {
         $errors = $this->errors()->flatten();
@@ -587,7 +588,7 @@ class Service {
 
         foreach ( $ruleList as $key => $rules )
         {
-            $newErrors = static::getValidationErrors($data->toArray(), [$key => $rules], $this->names->toArray());
+            $newErrors = $this->getValidationErrors($data->toArray(), [$key => $rules], $this->names->toArray());
 
             if ( !empty($newErrors) )
             {
@@ -664,6 +665,6 @@ class Service {
 
         ksort($arr);
 
-        return static::newCollection($arr);
+        return new Collection($arr);
     }
 }
