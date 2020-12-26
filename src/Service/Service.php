@@ -247,7 +247,7 @@ class Service {
         }
 
         $value     = $this->resolve($loader);
-        $isArray   = is_array($value);
+        $isArray   = is_array($value) && !static::isInitable($value);
         $arrValue  = $isArray ? $value : [$value];
         $isService = static::isInitable($arrValue[0]);
         $hasError  = false;
@@ -273,7 +273,7 @@ class Service {
 
             $arrValue[$i] = $value;
 
-            if ( ! $this->isResolveError($value) )
+            if ( $this->isResolveError($value) )
             {
                 unset($arrValue[$i]);
                 $hasError = true;
