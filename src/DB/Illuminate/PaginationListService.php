@@ -30,7 +30,7 @@ class PaginationListService extends Service
                 throw new \Exception;
             },
 
-            'result' => function ($cursor='', $limit, $orderByArray, $page='', $query) {
+            'result' => function ($limit, $orderByArray, $query, $cursor='', $page='') {
 
                 if ( $page !== '' )
                 {

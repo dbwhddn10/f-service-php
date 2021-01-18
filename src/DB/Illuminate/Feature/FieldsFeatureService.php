@@ -18,7 +18,7 @@ class FieldsFeatureService extends Service
     public static function getArrCallbackLists()
     {
         return [
-            'query.fields' => function ($availableFields, $fields='', $query) {
+            'query.fields' => function ($availableFields, $query, $fields='') {
 
                 $fields = $fields ? preg_split('/\s*,\s*/', $fields) : $availableFields;
 
