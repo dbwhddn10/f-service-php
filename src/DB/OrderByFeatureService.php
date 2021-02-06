@@ -26,11 +26,6 @@ class OrderByFeatureService extends Service
 
                 throw new \Exception;
             },
-
-            'order_by' => function () {
-
-                throw new \Exception;
-            },
         ];
     }
 
