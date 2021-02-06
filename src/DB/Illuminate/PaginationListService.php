@@ -30,6 +30,18 @@ class PaginationListService extends Service
                 throw new \Exception;
             },
 
+            'order_by' => function ($modelClass) {
+
+                if ( $modelClass::CREATED_AT == null )
+                {
+                    return (new $modelClass)->getKeyName().' desc';
+                }
+                else
+                {
+                    return $modelClass::CREATED_AT.' desc';
+                }
+            },
+
             'result' => function ($limit, $orderByArray, $query, $cursor='', $page='') {
 
                 if ( $page !== '' )
