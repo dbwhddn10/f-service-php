@@ -19,7 +19,7 @@
     "autoload-dev": {
         "classmap": [
             "tests"
-        ],
+        ]
     },
     "license": "MIT",
     "require": {
